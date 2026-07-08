@@ -383,7 +383,13 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
     <script>
+        // ===== CONEXIÓN SUPABASE =====
+        const SUPABASE_URL = 'https://eoinewhtfwxxltcvpowe.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVvaW5ld2h0Znd4eGx0Y3Zwb3dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NjkzMTksImV4cCI6MjA5OTA0NTMxOX0.1IFMJEfL3kqCQXgX4rgcy4_9pwL2q0bkKVG6K9sx7tU';
+        const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         const sasQuestions = [
             "Debido al uso de mi teléfono celular he perdido tareas planificadas[cite: 3]",
             "Debido al uso de mi teléfono celular he tenido dificultades para concentrarme en clase o mientras realizo tareas[cite: 3]",
@@ -399,17 +405,64 @@
 
         // BASE DE DATOS INICIAL EXCLUSIVA REQUERIDA
         let state = {
-            activeUser: null,
-            users: JSON.parse(localStorage.getItem('ed_users')) || [],
-            challenges: JSON.parse(localStorage.getItem('ed_challenges')) || [
-                { id: '1', curso: 'DPCC', grado: 'Todos los grados', comp: 'Construye su identidad', title: 'Modo Fantasma: Pasar 3 horas sin usar el celular mientras compartes con amigos o familia' },
-                { id: '2', curso: 'DPCC', grado: 'Todos los grados', comp: 'Convive y participa democráticamente', title: 'Entrevista de Impacto: Conversar con un vecino o personaje de la comunidad y conocer su historia' },
-                { id: '3', curso: 'CCSS', grado: '3ro de Secundaria', comp: 'Gestiona responsablemente el espacio y el ambiente', title: 'Rally Fotográfico: Recorrer la comunidad y encontrar lugares o detalles indicados por la app' },
-                { id: '4', curso: 'CCSS', grado: '3ro de Secundaria', comp: 'Gestiona responsablemente los recursos económicos', title: 'Emprendedor por un Día: Elaborar un producto sencillo con materiales de casa e intentar venderlo o intercambiarlo' },
-                { id: '5', curso: 'EPT', grado: '3ro de Secundaria', comp: 'Gestiona proyectos de emprendimiento económico o social', title: 'Skill Pro: Elegir una habilidad, practicarla durante la semana y documentar el avance' }
-            ],
-            evidences: JSON.parse(localStorage.getItem('ed_evidences')) || []
+            activeUser: null,   // fila de la tabla profiles del usuario con sesión activa
+            users: [],          // cache local de perfiles (se usa en la tabla docente)
+            challenges: [],     // cache local de retos
+            evidences: []       // cache local de evidencias
         };
+
+        // ===== CARGA DE DATOS DESDE SUPABASE =====
+        async function loadChallenges() {
+            const { data, error } = await sb.from('challenges').select('*').order('created_at');
+            if (error) { console.error(error); return; }
+            state.challenges = (data || []).map(c => ({ id: c.id, curso: c.curso, grado: c.grado, comp: c.comp, title: c.title }));
+        }
+
+        async function loadEvidences() {
+            const { data, error } = await sb.from('evidences').select('*').order('created_at', { ascending: false });
+            if (error) { console.error(error); return; }
+            state.evidences = (data || []).map(e => ({
+                id: e.id, usuario_id: e.usuario_id, username: e.username, grado: e.grado, seccion: e.seccion,
+                curso: e.curso, hours: e.raw_hours + ' hrs', rawHours: e.raw_hours, notes: e.notes,
+                reviewedBy: e.reviewed_by, status: e.status
+            }));
+        }
+
+        async function loadAllProfiles() {
+            const { data, error } = await sb.from('profiles').select('*');
+            if (error) { console.error(error); return; }
+            state.users = (data || []).map(mapProfileRow);
+        }
+
+        function mapProfileRow(p) {
+            return {
+                id: p.id, email: p.email, role: p.role, username: p.username, grado: p.grado, seccion: p.seccion,
+                cursos: p.cursos || [], assignedCourses: p.assigned_courses || [], status: p.status,
+                level: p.level, hoursThisMonth: p.hours_this_month, totalHours: p.total_hours,
+                quote: p.quote, img: p.img
+            };
+        }
+
+        async function initApp() {
+            const { data: { session } } = await sb.auth.getSession();
+            if (!session) return;
+            const { data: profile, error } = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+            if (error || !profile) return;
+            state.activeUser = mapProfileRow(profile);
+            await loadChallenges();
+            document.getElementById('auth-portal').classList.add('hidden');
+            if (state.activeUser.role === 'alumno') {
+                document.getElementById('student-app').classList.remove('hidden');
+                syncStudentDOM(); await updateRachasUI(); navTo('inicio');
+            } else {
+                await loadAllProfiles();
+                document.getElementById('teacher-app').classList.remove('hidden');
+                document.getElementById('txt-teacher-session-lbl').innerText = `Docente: ${state.activeUser.username} (${state.activeUser.email})`;
+                document.getElementById('prof-t-name').value = state.activeUser.username;
+                switchTeacherTab('validar');
+            }
+        }
+        initApp();
 
         function buildSasQuestionsDOM(containerId, prefix) {
             const container = document.getElementById(containerId); container.innerHTML = '';
@@ -448,7 +501,7 @@
             document.getElementById('student-test-section').classList.toggle('hidden', role === 'docente' || authMode === 'login');
         }
 
-        function handleAuthSubmit() {
+        async function handleAuthSubmit() {
             const email = document.getElementById('auth-email').value.trim();
             const password = document.getElementById('auth-password').value;
             const role = document.getElementById('auth-role').value;
@@ -459,36 +512,48 @@
                 const code = document.getElementById('auth-school-code').value.trim();
                 if(role === 'alumno' && code !== 'MGP-ALUMNO') { alert('Código incorrecto (MGP-ALUMNO).'); return; }
                 if(role === 'docente' && code !== 'MGP-DOCENTE') { alert('Código incorrecto (MGP-DOCENTE).'); return; }
-                if(state.users.some(u => u.email === email)) { alert('El correo ya existe.'); return; }
+                if(password.length < 6) { alert('La contraseña debe tener mínimo 6 caracteres.'); return; }
 
-                state.users.push({
-                    email, password, role,
+                const { data: signUpData, error: signUpError } = await sb.auth.signUp({ email, password });
+                if(signUpError) { alert('Error al registrar: ' + signUpError.message); return; }
+                const newUserId = signUpData.user ? signUpData.user.id : null;
+                if(!newUserId) { alert('No se pudo crear la cuenta.'); return; }
+
+                const { error: profileError } = await sb.from('profiles').insert({
+                    id: newUserId, email, role,
                     grado: document.getElementById('auth-grado').value,
                     seccion: document.getElementById('auth-seccion').value,
                     cursos: role === 'alumno' ? Array.from(document.querySelectorAll('.chk-interest:checked')).map(el => el.value) : [],
                     username: role === 'alumno' ? document.getElementById('auth-username').value.trim() : 'Docente',
-                    status: role === 'alumno' ? calculateSasScore('reg') : 'Habilitado',
-                    level: 1, hoursThisMonth: 0, totalHours: 0,
-                    quote: 'Haz que tu tiempo libre cuente.',
-                    img: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400',
-                    assignedCourses: []
+                    status: role === 'alumno' ? calculateSasScore('reg') : 'Habilitado'
                 });
-                localStorage.setItem('ed_users', JSON.stringify(state.users));
-                alert('¡Registro exitoso!'); toggleAuthMode('login'); return;
+                if(profileError) { alert('Cuenta creada, pero hubo un error guardando el perfil: ' + profileError.message); return; }
+
+                if(signUpData.session) {
+                    alert('¡Registro exitoso!'); toggleAuthMode('login'); return;
+                } else {
+                    alert('¡Registro exitoso! Revisa tu correo para confirmar la cuenta antes de iniciar sesión.');
+                    toggleAuthMode('login'); return;
+                }
             }
 
-            const user = state.users.find(u => u.email === email && u.password === password);
-            if(!user) { alert('Credenciales incorrectas.'); return; }
+            const { data: signInData, error: signInError } = await sb.auth.signInWithPassword({ email, password });
+            if(signInError) { alert('Credenciales incorrectas o cuenta no confirmada.'); return; }
 
-            state.activeUser = user;
+            const { data: profile, error: profileFetchError } = await sb.from('profiles').select('*').eq('id', signInData.user.id).single();
+            if(profileFetchError || !profile) { alert('No se encontró tu perfil.'); return; }
+
+            state.activeUser = mapProfileRow(profile);
+            await loadChallenges();
             document.getElementById('auth-portal').classList.add('hidden');
-            if(user.role === 'alumno') {
+            if(state.activeUser.role === 'alumno') {
                 document.getElementById('student-app').classList.remove('hidden');
-                syncStudentDOM(); updateRachasUI(); navTo('inicio');
+                syncStudentDOM(); await updateRachasUI(); navTo('inicio');
             } else {
+                await loadAllProfiles();
                 document.getElementById('teacher-app').classList.remove('hidden');
-                document.getElementById('txt-teacher-session-lbl').innerText = `Docente: ${user.username} (${user.email})`;
-                document.getElementById('prof-t-name').value = user.username === 'Docente' ? 'Prof. Integrante MGP' : user.username;
+                document.getElementById('txt-teacher-session-lbl').innerText = `Docente: ${state.activeUser.username} (${state.activeUser.email})`;
+                document.getElementById('prof-t-name').value = state.activeUser.username === 'Docente' ? 'Prof. Integrante MGP' : state.activeUser.username;
                 switchTeacherTab('validar');
             }
         }
@@ -509,7 +574,8 @@
         }
 
         // LÓGICA DE CONTROL CRÍTICO DE RACHAS EN GRIS POR DEFECTO
-        function updateRachasUI() {
+        async function updateRachasUI() {
+            await loadEvidences();
             const currentDayIdx = new Date().getDay(); // 0=Dom, 1=Lun...
             const adjustedDayIdx = currentDayIdx === 0 ? 6 : currentDayIdx - 1; // Ajustar a Lu=0, Ma=1...
 
@@ -522,7 +588,7 @@
             }
 
             // Validar si yo completé un reto hoy
-            const hasMyEvidence = state.evidences.some(e => e.usuario_id === state.activeUser.email);
+            const hasMyEvidence = state.evidences.some(e => e.usuario_id === state.activeUser.id);
             if (hasMyEvidence) {
                 document.getElementById(`p-day-${adjustedDayIdx}`).innerHTML = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'][adjustedDayIdx] + '<div>🔥</div>';
                 document.getElementById(`p-day-${adjustedDayIdx}`).classList.add('active-p');
@@ -556,11 +622,14 @@
                 state.activeUser.grado = document.getElementById('prof-stud-grado').value;
                 state.activeUser.quote = document.getElementById('input-prof-quote').value;
                 if(document.getElementById('input-prof-img').value.trim() !== '') state.activeUser.img = document.getElementById('input-prof-img').value;
-                
-                const idx = state.users.findIndex(u => u.email === state.activeUser.email);
-                if(idx !== -1) state.users[idx] = state.activeUser;
-                localStorage.setItem('ed_users', JSON.stringify(state.users));
-                btn.innerText = "Editar Configuración"; btn.style.background = "var(--primary-color)"; syncStudentDOM(); updateRachasUI(); alert('Perfil guardado.');
+
+                sb.from('profiles').update({
+                    username: state.activeUser.username, seccion: state.activeUser.seccion,
+                    grado: state.activeUser.grado, quote: state.activeUser.quote, img: state.activeUser.img
+                }).eq('id', state.activeUser.id).then(({ error }) => {
+                    if(error) { alert('Error al guardar: ' + error.message); return; }
+                    btn.innerText = "Editar Configuración"; btn.style.background = "var(--primary-color)"; syncStudentDOM(); updateRachasUI(); alert('Perfil guardado.');
+                });
             }
         }
 
@@ -570,11 +639,10 @@
             buildSasQuestionsDOM('sas-questions-retake-container', 'retake');
         }
 
-        function submitRetakeTest() {
+        async function submitRetakeTest() {
             state.activeUser.status = calculateSasScore('retake');
-            const idx = state.users.findIndex(u => u.email === state.activeUser.email);
-            if(idx !== -1) state.users[idx] = state.activeUser;
-            localStorage.setItem('ed_users', JSON.stringify(state.users));
+            const { error } = await sb.from('profiles').update({ status: state.activeUser.status }).eq('id', state.activeUser.id);
+            if(error) { alert('Error al guardar: ' + error.message); return; }
             document.getElementById('sub-retake-test-view').classList.add('hidden');
             document.getElementById('sub-perfil').classList.remove('hidden');
             syncStudentDOM(); alert('Diagnóstico actualizado.');
@@ -599,7 +667,7 @@
         function openOwnChallengeForm() { openEvidencePopupForm('Propuesta de Actividad Autónoma', true); }
         function cancelEvidenceSubmit() { navTo('reto-lista'); }
 
-        function submitEvidenceData() {
+        async function submitEvidenceData() {
             const notes = document.getElementById('evidence-notes').value.trim();
             const hours = parseFloat(document.getElementById('evidence-hours').value) || 0;
             if(!notes) { alert('Escribe tu bitácora.'); return; }
@@ -612,18 +680,34 @@
                 if(matchCh) targetCourse = matchCh.curso;
             }
 
-            state.evidences.push({ id: 'ev_' + Date.now(), usuario_id: state.activeUser.email, username: state.activeUser.username, grado: state.activeUser.grado, seccion: state.activeUser.seccion, curso: targetCourse, hours: hours + ' hrs', rawHours: hours, notes: notes, reviewedBy: 'Pendiente', status: 'Pendiente' });
-            localStorage.setItem('ed_evidences', JSON.stringify(state.evidences)); document.getElementById('evidence-notes').value = ''; alert('Evidencia enviada.');
-            updateRachasUI(); navTo('racha');
+            const { error } = await sb.from('evidences').insert({
+                usuario_id: state.activeUser.id, username: state.activeUser.username, grado: state.activeUser.grado,
+                seccion: state.activeUser.seccion, curso: targetCourse, raw_hours: hours, notes: notes,
+                reviewed_by: 'Pendiente', status: 'Pendiente'
+            });
+            if(error) { alert('Error al enviar evidencia: ' + error.message); return; }
+            document.getElementById('evidence-notes').value = ''; alert('Evidencia enviada.');
+            await updateRachasUI(); navTo('racha');
         }
 
         function navigateWeekSim() { alert('Simulación: Historial de semanas anteriores.'); }
-        function triggerSecuredAction(action) {
+        async function triggerSecuredAction(action) {
             if(action === 'reiniciar' && confirm('¿Borrar contadores?')) { alert('Contadores reiniciados.'); }
-            if(action === 'salir' && confirm('¿Cerrar sesión?')) logOutUser();
-            if(action === 'eliminar' && confirm('¿Eliminar cuenta permanentemente?')) { state.users = state.users.filter(u => u.email !== state.activeUser.email); localStorage.setItem('ed_users', JSON.stringify(state.users)); logOutUser(); }
+            if(action === 'salir' && confirm('¿Cerrar sesión?')) await logOutUser();
+            if(action === 'eliminar' && confirm('¿Eliminar cuenta permanentemente?')) {
+                // Borra el perfil (datos de la app). La cuenta de acceso (auth) queda inactiva al no tener perfil asociado;
+                // para borrarla por completo desde el sistema de autenticación se necesita acción de un administrador.
+                await sb.from('profiles').delete().eq('id', state.activeUser.id);
+                await logOutUser();
+            }
         }
-        function logOutUser() { state.activeUser = null; document.getElementById('student-app').classList.add('hidden'); document.getElementById('teacher-app').classList.add('hidden'); document.getElementById('auth-portal').classList.remove('hidden'); }
+        async function logOutUser() {
+            await sb.auth.signOut();
+            state.activeUser = null;
+            document.getElementById('student-app').classList.add('hidden');
+            document.getElementById('teacher-app').classList.add('hidden');
+            document.getElementById('auth-portal').classList.remove('hidden');
+        }
 
         function navTo(view) {
             document.getElementById('student-app').querySelectorAll('.sub-view').forEach(v => v.classList.add('hidden'));
@@ -632,6 +716,7 @@
             if(view === 'reto-lista') renderStudentChallengesFeed();
             if(view === 'racha') updateRachasUI();
         }
+        // usuario_id ahora es el id de auth (uuid), no el email; se mantiene la comparación por id en updateRachasUI
 
         // LÓGICA DOCENTE
         function switchTeacherTab(tab) {
@@ -640,7 +725,8 @@
             if(tab === 'validar') renderTeacherValidationTable(); if(tab === 'retos') renderTeacherRepoChallenges(); if(tab === 'perfil') renderTeacherProfileCourses();
         }
 
-        function renderTeacherValidationTable() {
+        async function renderTeacherValidationTable() {
+            await loadEvidences();
             const tbody = document.getElementById('render-teacher-validation-table'); tbody.innerHTML = '';
             if(state.evidences.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; font-style:italic; color:#718096;">Bandeja vacía. Llama a un alumno por lista para auditar sus bitácoras de desconexión.</td></tr>`; return; }
             state.evidences.forEach(ev => {
@@ -661,30 +747,40 @@
         function toggleTeacherRowSelectAll(master) { document.querySelectorAll('.td-select-student').forEach(cb => { if(cb.closest('tr').style.display !== 'none') cb.checked = master.checked; }); updateTeacherSelectionCount(); }
         function updateTeacherSelectionCount() { document.getElementById('lbl-teacher-selected-count').innerText = document.querySelectorAll('.td-select-student:checked').length + ' seleccionados'; }
 
-        function approveSelectedEvidencesLote() {
+        async function approveSelectedEvidencesLote() {
             const checked = document.querySelectorAll('.td-select-student:checked'); if(checked.length === 0) return;
-            checked.forEach(cb => {
-                const id = cb.value; const ev = state.evidences.find(e => e.id === id);
-                if(ev) { ev.status = 'Validado'; ev.reviewedBy = state.activeUser.username === 'Docente' ? 'Prof. Evaluador' : state.activeUser.username; document.getElementById('badge-cell-' + id).innerText = 'Validado'; document.getElementById('badge-cell-' + id).classList.add('approved'); document.getElementById('rev-cell-' + id).innerText = ev.reviewedBy; }
-                cb.checked = false;
+            const reviewedBy = state.activeUser.username === 'Docente' ? 'Prof. Evaluador' : state.activeUser.username;
+            const ids = Array.from(checked).map(cb => cb.value);
+            const { error } = await sb.from('evidences').update({ status: 'Validado', reviewed_by: reviewedBy }).in('id', ids);
+            if(error) { alert('Error al aprobar: ' + error.message); return; }
+            ids.forEach(id => {
+                document.getElementById('badge-cell-' + id).innerText = 'Validado';
+                document.getElementById('badge-cell-' + id).classList.add('approved');
+                document.getElementById('rev-cell-' + id).innerText = reviewedBy;
             });
-            localStorage.setItem('ed_evidences', JSON.stringify(state.evidences)); updateTeacherSelectionCount(); document.getElementById('chk-master-teacher').checked = false; alert('Aprobación en lote completada.');
+            checked.forEach(cb => cb.checked = false);
+            updateTeacherSelectionCount(); document.getElementById('chk-master-teacher').checked = false; alert('Aprobación en lote completada.');
         }
 
-        function simulateWeekElapse() {
+        async function simulateWeekElapse() {
             if(!confirm('¿Simular cierre semanal escolar?')) return;
-            state.users.forEach(u => {
-                if(u.role !== 'alumno') return;
-                const approvedEvidences = state.evidences.filter(e => e.usuario_id === u.email && e.status === 'Validado');
+            await loadAllProfiles(); await loadEvidences();
+            for(const u of state.users) {
+                if(u.role !== 'alumno') continue;
+                const approvedEvidences = state.evidences.filter(e => e.usuario_id === u.id && e.status === 'Validado');
                 const weeklyHours = approvedEvidences.reduce((sum, current) => sum + (current.rawHours || 0), 0);
-                if(weeklyHours >= 10) { u.level = (u.level || 1) + 1; } else if(weeklyHours === 0) { if((u.level || 1) > 1) u.level -= 1; }
-                u.hoursThisMonth = (u.hoursThisMonth || 0) + weeklyHours; u.totalHours = (u.totalHours || 0) + weeklyHours;
-            });
-            state.evidences = []; localStorage.setItem('ed_users', JSON.stringify(state.users)); localStorage.setItem('ed_evidences', JSON.stringify(state.evidences));
-            renderTeacherValidationTable(); alert('Cierre de semana calculado. El control de rangos ha sido actualizado en el sistema.');
+                let newLevel = u.level || 1;
+                if(weeklyHours >= 10) { newLevel += 1; } else if(weeklyHours === 0) { if(newLevel > 1) newLevel -= 1; }
+                const newHoursThisMonth = (u.hoursThisMonth || 0) + weeklyHours;
+                const newTotalHours = (u.totalHours || 0) + weeklyHours;
+                await sb.from('profiles').update({ level: newLevel, hours_this_month: newHoursThisMonth, total_hours: newTotalHours }).eq('id', u.id);
+            }
+            await sb.from('evidences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+            await renderTeacherValidationTable(); alert('Cierre de semana calculado. El control de rangos ha sido actualizado en el sistema.');
         }
 
-        function renderTeacherRepoChallenges() {
+        async function renderTeacherRepoChallenges() {
+            await loadChallenges();
             const container = document.getElementById('render-teacher-repo-challenges'); container.innerHTML = '';
             state.challenges.forEach(ch => {
                 const div = document.createElement('div'); div.className = 'repo-item';
@@ -693,16 +789,37 @@
             });
         }
 
-        function createNewChallengeData() {
+        async function createNewChallengeData() {
             const title = document.getElementById('add-c-title').value.trim(); const comp = document.getElementById('add-c-comp').value.trim(); if(!title || !comp) return;
-            state.challenges.push({ id: 'c_' + Date.now(), curso: document.getElementById('add-c-curso').value, grado: document.getElementById('add-c-grado').value, comp, title });
-            localStorage.setItem('ed_challenges', JSON.stringify(state.challenges)); document.getElementById('add-c-title').value = ''; document.getElementById('add-c-comp').value = ''; renderTeacherRepoChallenges(); alert('Reto guardado.');
+            const { error } = await sb.from('challenges').insert({
+                curso: document.getElementById('add-c-curso').value, grado: document.getElementById('add-c-grado').value,
+                comp, title, created_by: state.activeUser.id
+            });
+            if(error) { alert('Error al guardar reto: ' + error.message); return; }
+            document.getElementById('add-c-title').value = ''; document.getElementById('add-c-comp').value = ''; await renderTeacherRepoChallenges(); alert('Reto guardado.');
         }
-        function deleteChallenge(id) { state.challenges = state.challenges.filter(c => c.id !== id); localStorage.setItem('ed_challenges', JSON.stringify(state.challenges)); renderTeacherRepoChallenges(); }
+        async function deleteChallenge(id) {
+            const { error } = await sb.from('challenges').delete().eq('id', id);
+            if(error) { alert('Error al eliminar: ' + error.message); return; }
+            await renderTeacherRepoChallenges();
+        }
         function renderTeacherProfileCourses() { const list = document.getElementById('render-teacher-assigned-list'); list.innerHTML = ''; state.activeUser.assignedCourses.forEach((c, i) => { list.innerHTML += `<div class="assigned-badge">${c.curso} - ${c.grado} <span onclick="removeTeacherCourse(${i})">×</span></div>`; }); }
-        function assignCourseToTeacherMemory() { state.activeUser.assignedCourses.push({ curso: document.getElementById('prof-add-curso').value, grado: document.getElementById('prof-add-grado').value }); renderTeacherProfileCourses(); }
-        function removeTeacherCourse(i) { state.activeUser.assignedCourses.splice(i, 1); renderTeacherProfileCourses(); }
-        function saveTeacherProfileState() { state.activeUser.username = document.getElementById('prof-t-name').value; const idx = state.users.findIndex(u => u.email === state.activeUser.email); if(idx !== -1) state.users[idx] = state.activeUser; localStorage.setItem('ed_users', JSON.stringify(state.users)); alert('Perfil guardado.'); }
+        async function assignCourseToTeacherMemory() {
+            state.activeUser.assignedCourses.push({ curso: document.getElementById('prof-add-curso').value, grado: document.getElementById('prof-add-grado').value });
+            await sb.from('profiles').update({ assigned_courses: state.activeUser.assignedCourses }).eq('id', state.activeUser.id);
+            renderTeacherProfileCourses();
+        }
+        async function removeTeacherCourse(i) {
+            state.activeUser.assignedCourses.splice(i, 1);
+            await sb.from('profiles').update({ assigned_courses: state.activeUser.assignedCourses }).eq('id', state.activeUser.id);
+            renderTeacherProfileCourses();
+        }
+        async function saveTeacherProfileState() {
+            state.activeUser.username = document.getElementById('prof-t-name').value;
+            const { error } = await sb.from('profiles').update({ username: state.activeUser.username }).eq('id', state.activeUser.id);
+            if(error) { alert('Error al guardar: ' + error.message); return; }
+            alert('Perfil guardado.');
+        }
         document.addEventListener('change', function(e){ if(e.target && e.target.classList.contains('td-select-student')) updateTeacherSelectionCount(); });
     </script>
 </body>
