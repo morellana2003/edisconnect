@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Disconnect - Plataforma Escolar de Autorregulación Digital</title>
+    <style>
+        :root {
+            --primary-color: #2b6cb0;
+            --bg-student: #f7fafc;
+            --card-yellow: #fef3c7;
+            --text-dark: #2d3748;
+            --success-color: #38a169;
+            --danger-color: #e53e3e;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #edf2f7; color: var(--text-dark); display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 10px; }
+        
+        .main-wrapper { width: 100%; display: flex; justify-content: center; align-items: center; }
+
+        /* CONTENEDOR MÓVIL (ALUMNO) */
+        .phone-container { width: 100%; max-width: 390px; height: 820px; background: white; border: 8px solid #1a202c; border-radius: 36px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; position: relative; }
+        .screen { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 20px 15px; background: var(--bg-student); }
+        .hidden { display: none !important; }
+
+        /* COMPONENTES DE INTERFAZ MÓVIL */
+        .student-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .logo-placeholder { width: 45px; height: 45px; background: #e2e8f0; border-radius: 50%; border: 2px solid var(--primary-color); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; text-align: center; }
+        .fire-streak { display: flex; align-items: center; gap: 4px; font-weight: bold; font-size: 14px; color: #dd6b20; }
+
+        /* PANTALLAS DE AUTENTICACIÓN */
+        .auth-screen { display: flex; flex-direction: column; background: white; padding: 25px; border-radius: 20px; box-shadow: 0 10px 15px rgba(0,0,0,0.05); width: 100%; max-width: 460px; gap: 12px; max-height: 90vh; overflow-y: auto; }
+        .auth-tabs { display: flex; border-bottom: 2px solid #edf2f7; margin-bottom: 10px; }
+        .auth-tab-btn { flex: 1; padding: 10px; border: none; background: transparent; font-weight: bold; cursor: pointer; color: #718096; }
+        .auth-tab-btn.active { color: var(--primary-color); border-bottom: 3px solid var(--primary-color); }
+        
+        .form-group { margin-bottom: 12px; text-align: left; }
+        .form-group label { display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px; color: #4a5568; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+        .form-group input:disabled { background: #e2e8f0; opacity: 0.8; }
+        .form-row-split { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        
+        .btn-action { width: 100%; padding: 12px; font-size: 15px; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; color: white; background: var(--primary-color); transition: 0.2s; }
+        .btn-action:hover { opacity: 0.9; }
+
+        /* CUESTIONARIO SAS-SV PERÚ */
+        .sas-item-box { background: #fff; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+        .sas-item-box p { font-size: 12px; font-weight: bold; margin-bottom: 6px; color: #2d3748; }
+        .sas-options-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; text-align: center; }
+        .sas-options-grid label { font-size: 10px; display: flex; flex-direction: column; align-items: center; cursor: pointer; font-weight: 500; }
+
+        .test-box { background: #ebf8ff; border: 1px solid #bee3f8; padding: 12px; border-radius: 8px; margin-bottom: 10px; }
+        .test-box p { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+        .interests-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .interest-item { font-size: 12px; display: flex; align-items: center; gap: 4px; font-weight: 500; }
+
+        /* MÓDULO INICIO ALUMNO */
+        .welcome-text { font-size: 26px; font-weight: bold; text-align: center; margin-top: 10px; }
+        .sub-welcome { font-size: 15px; text-align: center; color: #4a5568; margin-bottom: 20px; }
+        .inspo-card { width: 100%; height: 260px; background: #cbd5e0; border-radius: 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid #1a202c; }
+        .inspo-card img { width: 100%; height: 100%; object-fit: cover; }
+        .quote-box { font-size: 13px; text-align: center; font-style: italic; color: #2d3748; margin-top: 20px; padding: 0 10px; line-height: 1.4; font-weight: 600; }
+
+        /* RETOS SUGERIDOS */
+        .retos-box { background: #fde68a; border-radius: 12px; padding: 15px; min-height: 480px; border-right: 4px solid #1a202c; display: flex; flex-direction: column; }
+        .course-section-title { font-size: 13px; font-weight: bold; color: #2b6cb0; border-bottom: 1px solid #cbd5e0; margin-top: 12px; margin-bottom: 8px; padding-bottom: 2px; text-transform: uppercase; text-align:left; }
+        .competencia-label { font-size: 11px; color: #718096; font-style: italic; display: block; margin-bottom: 4px; text-align:left; }
+        .reto-item { display: flex; flex-direction: column; margin-bottom: 12px; cursor: pointer; background: rgba(255,255,255,0.4); padding: 6px; border-radius: 6px; }
+        .reto-item span { font-weight: bold; text-decoration: underline; font-size: 14px; text-align: left; color: #2d3748; }
+
+        /* RACHAS TIPO DUOLINGO */
+        .racha-container { background: white; border-radius: 12px; padding: 12px; margin-bottom: 15px; border: 1px solid #cbd5e0; }
+        .racha-header-nav { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; background: #edf2f7; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+        .racha-nav-btn { background: transparent; border: none; font-weight: bold; color: var(--primary-color); cursor: pointer; }
+        .days-row { display: flex; justify-content: space-between; margin: 10px 0; }
+        .day-indicator { text-align: center; font-size: 12px; font-weight: bold; width: 13%; color: #a0aec0; }
+        .day-indicator.active-p { color: #dd6b20; }
+        .day-indicator.active-s { color: var(--success-color); }
+        .day-indicator div { margin-top: 3px; font-size: 14px; }
+        .accumulated-box { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .metric-card { background: #f7fafc; border-radius: 8px; padding: 8px; text-align: center; border: 1px solid #e2e8f0; }
+        .metric-card h4 { font-size: 9px; background: #e53e3e; color: white; display: inline-block; padding: 2px 6px; margin-bottom: 6px; border-radius: 4px; font-weight: bold; }
+        .metric-card .val { background: #ed8936; color: white; padding: 4px 8px; font-weight: bold; display: inline-block; border-radius: 4px; font-size: 14px; }
+
+        /* CONFIGURACIÓN Y MENÚS */
+        .config-list { display: flex; flex-direction: column; gap: 12px; margin-top: 15px; }
+        .btn-config-opt { width: 100%; padding: 12px; text-align: left; font-weight: bold; border-radius: 8px; border: 1px solid #cbd5e0; cursor: pointer; background: white; }
+        .btn-config-opt.danger { color: var(--danger-color); border-color: var(--danger-color); }
+        .nav-bar { height: 65px; border-top: 2px solid #1a202c; display: flex; justify-content: space-around; align-items: center; background: white; padding-bottom: 5px; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; color: #718096; cursor: pointer; width: 20%; }
+        .nav-item.active { color: #3182ce; }
+
+        /* VISTA DOCENTE */
+        .teacher-layout { width: 100%; max-width: 1100px; background: white; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; border: 4px solid #2b6cb0; margin: 10px; }
+        .teacher-header-bar { background: var(--primary-color); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .teacher-nav { background: #edf2f7; display: flex; border-bottom: 2px solid #cbd5e0; }
+        .t-nav-btn { padding: 12px 24px; border: none; background: transparent; font-weight: bold; cursor: pointer; color: #4a5568; }
+        .t-nav-btn.active { background: white; border-bottom: 3px solid var(--primary-color); color: var(--primary-color); }
+        .teacher-content { padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .filter-box { background: #f7fafc; padding: 15px; border-radius: 12px; border: 1px solid #e2e8f0; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+        .filter-group label { font-size: 12px; font-weight: bold; color: #4a5568; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid #cbd5e0; border-radius: 6px; width: 100%; font-size: 13px; }
+        .table-container { overflow-x: auto; max-height: 400px; border: 1px solid #cbd5e0; border-radius: 8px; }
+        .teacher-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; min-width: 900px; }
+        .teacher-table th, .teacher-table td { padding: 12px 15px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }
+        .teacher-table th { background: #ebf8ff; color: #2b6cb0; position: sticky; top: 0; z-index: 5; }
+        .teacher-table tr:hover { background: #f8fafc; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #feebc8; color: #c05621; }
+        .status-badge.approved { background: #c6f6d5; color: #22543d; }
+        .challenge-repo { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .repo-item { background: #f7fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .repo-meta { font-size: 12px; color: #718096; margin-top: 4px; }
+        .repo-actions button { padding: 4px 8px; font-size: 11px; font-weight: bold; border-radius: 4px; margin-left: 5px; cursor: pointer; border: 1px solid #cbd5e0; }
+        .form-box-add { background: #edf2f7; padding: 20px; border-radius: 12px; border: 1px solid #cbd5e0; }
+        .assigned-badge { background: #e2e8f0; padding: 4px 8px; border-radius: 6px; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+        .assigned-badge span { color: red; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="main-wrapper">
+        <!-- PORTAL AUTH -->
+        <div id="auth-portal" class="auth-screen">
+            <h2 style="color: var(--primary-color); text-align: center;">Portal E-Disconnect</h2>
+            <div class="auth-tabs">
+                <button id="tab-auth-login" class="auth-tab-btn active" onclick="toggleAuthMode('login')">Iniciar Sesión</button>
+                <button id="tab-auth-register" class="auth-tab-btn" onclick="toggleAuthMode('register')">Registrarse</button>
+            </div>
+
+            <div id="auth-fields">
+                <div class="form-group" id="group-role-select">
+                    <label>Tipo de Cuenta</label>
+                    <select id="auth-role" onchange="handleRoleFieldBehavior()">
+                        <option value="alumno">Estudiante (Seudónimo Protegido)[cite: 4]</option>
+                        <option value="docente">Docente / Tutor de Aula</option>
+                    </select>
+                </div>
+                
+                <div class="form-group hidden" id="group-username">
+                    <label>Seudónimo / Usuario (No usar nombres reales)[cite: 4]</label>
+                    <input type="text" id="auth-username" placeholder="Ej: Bicho07, AnonimoMGP">
+                </div>
+                <div class="form-group"><label>Correo Electrónico</label><input type="email" id="auth-email" placeholder="ejemplo@mgp.edu.pe"></div>
+                <div class="form-group"><label>Contraseña</label><input type="password" id="auth-password" placeholder="Mínimo 6 caracteres"></div>
+
+                <div id="register-only-fields" class="hidden">
+                    <div class="form-row-split">
+                        <div class="form-group">
+                            <label>Grado</label>
+                            <select id="auth-grado">
+                                <option value="3ro de Secundaria">3ro de Secundaria</option>
+                                <option value="4to de Secundaria">4to de Secundaria</option>
+                                <option value="5to de Secundaria">5to de Secundaria</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sección (A hasta H)[cite: 4]</label>
+                            <select id="auth-seccion">
+                                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                                <option value="E">E</option><option value="F">F</option><option value="G">G</option><option value="H">H</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>Llave de Autorización de la I.E. (Antifraude)[cite: 4]</label><input type="password" id="auth-school-code" placeholder="Código escolar obligatorio"></div>
+
+                    <!-- TEST PERUANO SAS-SV INTEGRADO REAL[cite: 3] -->
+                    <div id="student-test-section" class="hidden" style="margin-top: 15px;">
+                        <h4 style="font-size:13px; color:var(--primary-color); margin-bottom:10px;">📋 Escala Oficial Corta SAS-SV Perú[cite: 3]</h4>
+                        <div style="max-height: 200px; overflow-y: auto; padding-right: 5px;" id="sas-questions-register-container"></div>
+                        
+                        <div class="test-box" style="background:#f0fff4; border-color:#c6f6d5; margin-top:10px;">
+                            <p><strong>🎯 Cursos de Interés Curricular:</strong></p>
+                            <div class="interests-grid">
+                                <div class="interest-item"><input type="checkbox" class="chk-interest" value="DPCC" checked> DPCC</div>
+                                <div class="interest-item"><input type="checkbox" class="chk-interest" value="CCSS" checked> CC.SS.</div>
+                                <div class="interest-item"><input type="checkbox" class="chk-interest" value="EPT" checked> EPT</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-action" style="margin-top:10px;" onclick="handleAuthSubmit()" id="btn-auth-trigger">Iniciar Sesión</button>
+            </div>
+        </div>
+
+        <!-- APP DEL ESTUDIANTE (VISTA MÓVIL) -->
+        <div id="student-app" class="phone-container hidden">
+            <div class="screen">
+                <div class="student-header">
+                    <div class="logo-placeholder">M.G.P.<br>Huaycán</div>
+                    <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                        <span id="stud-level-badge" style="font-size:11px; font-weight:bold; background:var(--primary-color); color:white; padding:2px 6px; border-radius:4px; margin-bottom:2px;">Nivel 1</span>
+                        <div class="fire-streak">🔥 <span id="stud-streak-badge">0</span></div>
+                    </div>
+                </div>
+
+                <div id="sub-inicio" class="sub-view">
+                    <h3 class="welcome-text">¡Hola, <span id="lbl-student-user">Usuario</span>!</h3>
+                    <p class="sub-welcome">¿Preparado para los retos de hoy?</p>
+                    <div class="inspo-card"><img id="render-inspo-img" src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400"></div>
+                    <p class="quote-box" id="render-inspo-quote">"El talento no lo es todo..."</p>
+                </div>
+
+                <div id="sub-perfil" class="sub-view hidden">
+                    <h3 class="retos-title" style="text-align: left; margin-bottom: 12px;">Mi Perfil</h3>
+                    <div class="form-group"><label>Usuario</label><input type="text" id="prof-stud-user" disabled></div>
+                    <div class="form-group"><label>Correo (Fijo)</label><input type="text" id="prof-stud-email" disabled style="background:#e2e8f0;"></div>
+                    <div class="form-row-split">
+                        <div class="form-group"><label>Grado</label><select id="prof-stud-grado" disabled><option value="3ro de Secundaria">3ro de Sec.</option><option value="4to de Secundaria">4to de Sec.</option></select></div>
+                        <div class="form-group"><label>Sección</label><input type="text" id="prof-stud-seccion" disabled></div>
+                    </div>
+                    <div class="form-group"><label>Cursos Inscritos</label><input type="text" id="prof-stud-cursos" disabled></div>
+                    <div class="form-group"><label>Estadío Científico (SAS-SV)</label><input type="text" id="prof-stud-status" disabled style="background:#fef3c7; font-weight:bold;"></div>
+                    
+                    <div style="border: 1px dashed #cbd5e0; padding: 10px; border-radius: 8px; margin-top: 10px; background: white;">
+                        <label style="font-size:12px; font-weight:bold; color:var(--primary-color);">🖼️ Inspiración Personalizada</label>
+                        <input type="text" id="input-prof-quote" placeholder="Tu frase motivacional" style="padding:6px; font-size:13px; margin-top:5px; margin-bottom:5px; width:100%;">
+                        <input type="text" id="input-prof-img" placeholder="URL de la imagen de portada" style="padding:6px; font-size:13px; width:100%;">
+                    </div>
+                    <button class="btn-edit" id="btn-save-student-profile" onclick="toggleStudentProfileMutation()">Editar Configuración</button>
+                    <button class="btn-retake-test" style="width:100%; margin-top:15px;" onclick="openRetakeTestPopup()">📊 Rendir nueva encuesta de diagnóstico</button>
+                </div>
+
+                <div id="sub-retake-test-view" class="sub-view hidden">
+                    <h3 class="retos-title">Re-evaluación SAS-SV</h3>
+                    <div id="sas-questions-retake-container" style="max-height: 480px; overflow-y: auto; margin-bottom: 15px;"></div>
+                    <button class="btn-action" style="background:var(--success-color);" onclick="submitRetakeTest()">Actualizar Diagnóstico</button>
+                </div>
+
+                <div id="sub-reto-lista" class="sub-view hidden">
+                    <div class="retos-box">
+                        <h3 class="retos-title">Retos sugeridos</h3>
+                        <div id="student-challenges-render-feed"></div>
+                        <button class="btn-add-own" onclick="openOwnChallengeForm()">AGREGAR MI PROPIO RETO</button>
+                    </div>
+                </div>
+
+                <div id="sub-reto-evidencia" class="sub-view hidden">
+                    <div class="evidencia-popup">
+                        <span class="close-popup" onclick="cancelEvidenceSubmit()">✖</span>
+                        <h3 class="retos-title" style="font-size: 18px; text-align: left;" id="lbl-active-challenge-title">Carga de Evidencia</h3>
+                        <div id="box-own-course-select" class="form-group hidden">
+                            <label>¿A qué área curricular va dirigido?</label>
+                            <select id="own-course-target"><option value="DPCC">DPCC</option><option value="CCSS">Ciencias Sociales</option><option value="EPT">EPT</option></select>
+                        </div>
+                        <div class="form-group"><label>Bitácora de desconexión:</label><textarea class="txt-area-evidence" id="evidence-notes" placeholder="¿Qué hiciste?"></textarea></div>
+                        <div class="form-group"><label>Tiempo invertido (horas):</label><input type="number" class="input-hours" id="evidence-hours" value="1.0" step="0.5"></div>
+                        <button class="btn-send-evidence" onclick="submitEvidenceData()">Enviar Evidencia</button>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN DE RACHAS DINÁMICAS REORDENADAS -->
+                <div id="sub-racha" class="sub-view hidden">
+                    <h3 class="retos-title" style="margin-bottom:12px;">Mis Rachas</h3>
+                    
+                    <!-- MI RACHA PERSONAL -->
+                    <div class="racha-container">
+                        <div class="racha-header-nav"><button class="racha-nav-btn" onclick="navigateWeekSim()">◀ Pasado</button><span>Semana Actual</span><button class="racha-nav-btn" onclick="navigateWeekSim()">Siguiente ▶</button></div>
+                        <p style="font-size:12px; font-weight:bold; color:var(--primary-color)">🔥 MI RACHA PERSONAL</p>
+                        <div class="days-row" id="row-days-p">
+                            <div class="day-indicator" id="p-day-0">Lu<div>⚫</div></div>
+                            <div class="day-indicator" id="p-day-1">Ma<div>⚫</div></div>
+                            <div class="day-indicator" id="p-day-2">Mi<div>⚫</div></div>
+                            <div class="day-indicator" id="p-day-3">Ju<div>⚫</div></div>
+                            <div class="day-indicator" id="p-day-4">Vi<div>⚫</div></div>
+                            <div class="day-indicator" id="p-day-5">Sa<div>⚫</div></div>
+                            <div class="day-indicator" id="p-day-6">Do<div>⚫</div></div>
+                        </div>
+                        <div class="accumulated-box">
+                            <div class="metric-card"><h4>HORAS DEDICADAS ESTE MES</h4><br><span class="val" id="val-mes-p">0.0 hrs</span></div>
+                            <div class="metric-card"><h4>HORAS TOTALES</h4><br><span class="val" id="val-total-p">0.0 hrs</span></div>
+                        </div>
+                    </div>
+
+                    <!-- RACHA DE MI SECCIÓN -->
+                    <div class="racha-container">
+                        <div class="racha-header-nav"><button class="racha-nav-btn" onclick="navigateWeekSim()">◀ Pasado</button><span>Semana Actual</span><button class="racha-nav-btn" onclick="navigateWeekSim()">Siguiente ▶</button></div>
+                        <p style="font-size:12px; font-weight:bold; color:var(--success-color)">🛡️ CONTROL DE RACHA DE SECCIÓN</p>
+                        <div class="days-row" id="row-days-s">
+                            <div class="day-indicator" id="s-day-0">Lu<div>⚫</div></div>
+                            <div class="day-indicator" id="s-day-1">Ma<div>⚫</div></div>
+                            <div class="day-indicator" id="s-day-2">Mi<div>⚫</div></div>
+                            <div class="day-indicator" id="s-day-3">Ju<div>⚫</div></div>
+                            <div class="day-indicator" id="s-day-4">Vi<div>⚫</div></div>
+                            <div class="day-indicator" id="s-day-5">Sa<div>⚫</div></div>
+                            <div class="day-indicator" id="s-day-6">Do<div>⚫</div></div>
+                        </div>
+                        <div class="accumulated-box">
+                            <div class="metric-card"><h4>HORAS DEDICADAS ESTE MES</h4><br><span class="val" id="val-mes-s">0.0 hrs</span></div>
+                            <div class="metric-card"><h4>HORAS TOTALES</h4><br><span class="val" id="val-total-s">0.0 hrs</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="sub-config" class="sub-view hidden">
+                    <h3 class="retos-title" style="text-align: left;">Configuración</h3>
+                    <div class="config-list">
+                        <button class="btn-config-opt" onclick="triggerSecuredAction('reiniciar')">Reiniciar Rachas</button>
+                        <button class="btn-config-opt" onclick="triggerSecuredAction('salir')">Cerrar Sesión</button>
+                        <button class="btn-config-opt danger" onclick="triggerSecuredAction('eliminar')">Eliminar Cuenta</button>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-bar" id="student-nav">
+                <div class="nav-item active" onclick="navTo('inicio')">🏠<br>Inicio</div>
+                <div class="nav-item" onclick="navTo('perfil')">👤<br>Perfil</div>
+                <div class="nav-item" onclick="navTo('reto-lista')">🏆<br>Reto</div>
+                <div class="nav-item" onclick="navTo('racha')">📊<br>Racha</div>
+                <div class="nav-item" onclick="navTo('config')">⚙️<br>Config.</div>
+            </div>
+        </div>
+
+        <!-- CONSOLA DOCENTE -->
+        <div id="teacher-app" class="teacher-layout hidden">
+            <div class="teacher-header-bar">
+                <div><h2>E-Disconnect Consola Docente</h2><span id="txt-teacher-session-lbl">Sesión Activa</span></div>
+                <button class="btn-back-role" style="background:#e2e8f0; padding:6px 12px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="logOutUser()">Cerrar Sesión</button>
+            </div>
+            <div class="teacher-nav">
+                <button id="t-tab-validar" class="t-nav-btn active" onclick="switchTeacherTab('validar')">Validación Conjunta de Evidencias</button>
+                <button id="t-tab-retos" class="t-nav-btn" onclick="switchTeacherTab('retos')">Repositorio Escolar de Retos</button>
+                <button id="t-tab-perfil" class="t-nav-btn" onclick="switchTeacherTab('perfil')">Mi Configuración Profesional</button>
+            </div>
+
+            <div id="t-panel-validar" class="teacher-content">
+                <div class="filter-box">
+                    <div class="filter-group"><label>Grado</label><select id="f-t-grado" onchange="filterTeacherTableData()"><option value="todos">Todos</option><option value="3ro de Secundaria">3ro de Secundaria</option></select></div>
+                    <div class="filter-group">
+                        <label>Sección (A-H)</label>
+                        <select id="f-t-seccion" onchange="filterTeacherTableData()">
+                            <option value="todos">Todas</option>
+                            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                            <option value="E">E</option><option value="F">F</option><option value="G">G</option><option value="H">H</option>
+                        </select>
+                    </div>
+                    <div class="filter-group"><label>Materia</label><select id="f-t-curso" onchange="filterTeacherTableData()"><option value="todos">Todas</option><option value="DPCC">DPCC</option><option value="CCSS">CC.SS.</option><option value="EPT">EPT</option></select></div>
+                    <div class="filter-group"><label>Buscar Seudónimo</label><input type="text" id="f-t-search" placeholder="Escribe el usuario..." oninput="filterTeacherTableData()"></div>
+                </div>
+
+                <div class="table-container"><table class="teacher-table"><thead><tr><th width="40"><input type="checkbox" id="chk-master-teacher" onclick="toggleTeacherRowSelectAll(this)"></th><th>Estudiante (Seudónimo)[cite: 4]</th><th>Grado</th><th>Sec.</th><th>Materia</th><th>Horas Invertidas</th><th>Bitácora de Desconexión</th><th>Foto</th><th>Revisado Por</th><th>Estado</th></tr></thead><tbody id="render-teacher-validation-table"></tbody></table></div>
+                <div class="action-bar-teacher">
+                    <span id="lbl-teacher-selected-count" style="font-weight:bold; color:var(--primary-color);">0 seleccionados</span>
+                    <button class="btn-bulk-approve" style="background:var(--success-color); font-weight:bold; color:white; border:none; padding:8px 15px; cursor:pointer;" onclick="approveSelectedEvidencesLote()">Validar Firma de Docente en Lote</button>
+                    <button class="btn-bulk-approve" style="background:#ed8936; color:white; font-weight:bold; border:none; padding:8px 15px; cursor:pointer;" onclick="simulateWeekElapse()">⚙️ Simular Cierre Semanal (Control de Niveles)</button>
+                </div>
+            </div>
+
+            <div id="t-panel-retos" class="teacher-content hidden">
+                <h3>Repositorio de Actividades y Ocio Estructurado</h3>
+                <div class="challenge-repo" id="render-teacher-repo-challenges"></div>
+                <div class="form-box-add">
+                    <h4>➕ Diseñar y Cargar Nuevo Reto</h4>
+                    <div class="filter-box" style="padding:0; background:transparent; border:none; margin-bottom:10px; gap:10px;">
+                        <div class="filter-group"><label>Materia</label><select id="add-c-curso"><option value="DPCC">DPCC</option><option value="CCSS">Ciencias Sociales</option><option value="EPT">EPT</option></select></div>
+                        <div class="filter-group"><label>Grado Habilitado</label><select id="add-c-grado"><option value="Todos los grados">Todos los grados</option><option value="3ro de Secundaria">3ro de Secundaria</option></select></div>
+                    </div>
+                    <div class="form-group"><label>Competencia CNEB Asociada</label><input type="text" id="add-c-comp" placeholder="Ej: Convive y participa democráticamente"></div>
+                    <div class="form-group"><label>Título del Reto Escolar</label><input type="text" id="add-c-title" placeholder="Ej: Diseñar un boceto manual para excedentes textiles[cite: 1]"></div>
+                    <button class="btn-submit-challenge" onclick="createNewChallengeData()">Publicar Reto</button>
+                </div>
+            </div>
+
+            <div id="t-panel-perfil" class="teacher-content hidden">
+                <h3>Mi Configuración Profesional</h3>
+                <div style="background:#f7fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0; max-width:600px; display:flex; flex-direction: column; gap:12px;">
+                    <div class="form-row-split">
+                        <div class="form-group"><label>Nombres del Docente</label><input type="text" id="prof-t-name" value="Prof. Integrante MGP"></div>
+                        <div class="form-group"><label>I.E.</label><input type="text" value="Manuel González Prada" readonly style="background:#cbd5e0;"></div>
+                    </div>
+                    <div style="border:1px dashed #cbd5e0; padding:12px; border-radius:8px; background:white;">
+                        <h4 style="font-size:14px; margin-bottom:8px; color:var(--primary-color);">➕ Registrar Área y Grado Curricular</h4>
+                        <div style="display:flex; gap:10px; align-items:flex-end;">
+                            <div style="flex:1;"><select id="prof-add-curso"><option value="DPCC">DPCC</option><option value="CCSS">CC.SS.</option><option value="EPT">EPT</option></select></div>
+                            <div style="flex:1;"><select id="prof-add-grado"><option value="3ro de Secundaria">3ro de Sec.</option></select></div>
+                            <button type="button" class="btn-bulk-approve" style="padding:7px 12px; font-size:13px;" onclick="assignCourseToTeacherMemory()">Asignar</button>
+                        </div>
+                        <div id="render-teacher-assigned-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-top:12px;"></div>
+                    </div>
+                    <button class="btn-submit-challenge" style="width:max-content; align-self:flex-end;" onclick="saveTeacherProfileState()">Guardar Perfil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sasQuestions = [
+            "Debido al uso de mi teléfono celular he perdido tareas planificadas[cite: 3]",
+            "Debido al uso de mi teléfono celular he tenido dificultades para concentrarme en clase o mientras realizo tareas[cite: 3]",
+            "He sentido dolor en las muñecas o detrás del cuello mientras uso mi teléfono celular[cite: 3]",
+            "No soportaría no tener un teléfono celular[cite: 3]",
+            "Me siento impaciente e inquieto cuando no tengo mi teléfono celular en la mano[cite: 3]",
+            "Pienso en mi teléfono celular incluso cuando no lo estoy usando[cite: 3]",
+            "Nunca dejaré de usar mi teléfono celular, incluso cuando mi vida diaria ya esté afectada por él[cite: 3]",
+            "Constantemente reviso mi teléfono celular para no perder conversaciones en redes[cite: 3]",
+            "Uso mi teléfono celular durante más tiempo del que había planeado[cite: 3]",
+            "Las personas a mi alrededor me dicen que uso demasiado mi teléfono celular[cite: 3]"
+        ];
+
+        // BASE DE DATOS INICIAL EXCLUSIVA REQUERIDA
+        let state = {
+            activeUser: null,
+            users: JSON.parse(localStorage.getItem('ed_users')) || [],
+            challenges: JSON.parse(localStorage.getItem('ed_challenges')) || [
+                { id: '1', curso: 'DPCC', grado: 'Todos los grados', comp: 'Construye su identidad', title: 'Modo Fantasma: Pasar 3 horas sin usar el celular mientras compartes con amigos o familia' },
+                { id: '2', curso: 'DPCC', grado: 'Todos los grados', comp: 'Convive y participa democráticamente', title: 'Entrevista de Impacto: Conversar con un vecino o personaje de la comunidad y conocer su historia' },
+                { id: '3', curso: 'CCSS', grado: '3ro de Secundaria', comp: 'Gestiona responsablemente el espacio y el ambiente', title: 'Rally Fotográfico: Recorrer la comunidad y encontrar lugares o detalles indicados por la app' },
+                { id: '4', curso: 'CCSS', grado: '3ro de Secundaria', comp: 'Gestiona responsablemente los recursos económicos', title: 'Emprendedor por un Día: Elaborar un producto sencillo con materiales de casa e intentar venderlo o intercambiarlo' },
+                { id: '5', curso: 'EPT', grado: '3ro de Secundaria', comp: 'Gestiona proyectos de emprendimiento económico o social', title: 'Skill Pro: Elegir una habilidad, practicarla durante la semana y documentar el avance' }
+            ],
+            evidences: JSON.parse(localStorage.getItem('ed_evidences')) || []
+        };
+
+        function buildSasQuestionsDOM(containerId, prefix) {
+            const container = document.getElementById(containerId); container.innerHTML = '';
+            sasQuestions.forEach((q, idx) => {
+                const box = document.createElement('div'); box.className = 'sas-item-box';
+                box.innerHTML = `<p>${idx+1}. ${q}</p><div class="sas-options-grid">` + 
+                    [1,2,3,4,5,6].map(num => `<label><input type="radio" name="${prefix}_q_${idx}" value="${num}" ${num===1?'checked':''}>${num}</label>`).join('') + `</div>`;
+                container.appendChild(box);
+            });
+        }
+        buildSasQuestionsDOM('sas-questions-register-container', 'reg');
+
+        function calculateSasScore(prefix) {
+            let total = 0;
+            for(let i=0; i<10; i++) {
+                const checkedEl = document.querySelector(`input[name="${prefix}_q_${i}"]:checked`);
+                if(checkedEl) total += parseInt(checkedEl.value);
+            }
+            if(total <= 21) return "Bajo Riesgo / Control Saludable";
+            if(total <= 31) return "Uso de Riesgo / Moderado";
+            return "Dependencia Alta / Nomofobia";
+        }
+
+        function toggleAuthMode(mode) {
+            authMode = mode;
+            document.getElementById('tab-auth-login').classList.toggle('active', mode === 'login');
+            document.getElementById('tab-auth-register').classList.toggle('active', mode === 'register');
+            document.getElementById('register-only-fields').classList.toggle('hidden', mode === 'login');
+            document.getElementById('group-username').classList.toggle('hidden', mode === 'login' || document.getElementById('auth-role').value === 'docente');
+            document.getElementById('btn-auth-trigger').innerText = mode === 'login' ? 'Iniciar Sesión' : 'Completar Registro Escolar';
+        }
+
+        function handleRoleFieldBehavior() {
+            const role = document.getElementById('auth-role').value;
+            document.getElementById('group-username').classList.toggle('hidden', role === 'docente' || authMode === 'login');
+            document.getElementById('student-test-section').classList.toggle('hidden', role === 'docente' || authMode === 'login');
+        }
+
+        function handleAuthSubmit() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const role = document.getElementById('auth-role').value;
+
+            if(!email || !password) { alert('Campos vacíos.'); return; }
+
+            if(authMode === 'register') {
+                const code = document.getElementById('auth-school-code').value.trim();
+                if(role === 'alumno' && code !== 'MGP-ALUMNO') { alert('Código incorrecto (MGP-ALUMNO).'); return; }
+                if(role === 'docente' && code !== 'MGP-DOCENTE') { alert('Código incorrecto (MGP-DOCENTE).'); return; }
+                if(state.users.some(u => u.email === email)) { alert('El correo ya existe.'); return; }
+
+                state.users.push({
+                    email, password, role,
+                    grado: document.getElementById('auth-grado').value,
+                    seccion: document.getElementById('auth-seccion').value,
+                    cursos: role === 'alumno' ? Array.from(document.querySelectorAll('.chk-interest:checked')).map(el => el.value) : [],
+                    username: role === 'alumno' ? document.getElementById('auth-username').value.trim() : 'Docente',
+                    status: role === 'alumno' ? calculateSasScore('reg') : 'Habilitado',
+                    level: 1, hoursThisMonth: 0, totalHours: 0,
+                    quote: 'Haz que tu tiempo libre cuente.',
+                    img: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400',
+                    assignedCourses: []
+                });
+                localStorage.setItem('ed_users', JSON.stringify(state.users));
+                alert('¡Registro exitoso!'); toggleAuthMode('login'); return;
+            }
+
+            const user = state.users.find(u => u.email === email && u.password === password);
+            if(!user) { alert('Credenciales incorrectas.'); return; }
+
+            state.activeUser = user;
+            document.getElementById('auth-portal').classList.add('hidden');
+            if(user.role === 'alumno') {
+                document.getElementById('student-app').classList.remove('hidden');
+                syncStudentDOM(); updateRachasUI(); navTo('inicio');
+            } else {
+                document.getElementById('teacher-app').classList.remove('hidden');
+                document.getElementById('txt-teacher-session-lbl').innerText = `Docente: ${user.username} (${user.email})`;
+                document.getElementById('prof-t-name').value = user.username === 'Docente' ? 'Prof. Integrante MGP' : user.username;
+                switchTeacherTab('validar');
+            }
+        }
+
+        function syncStudentDOM() {
+            document.getElementById('lbl-student-user').innerText = state.activeUser.username;
+            document.getElementById('prof-stud-user').value = state.activeUser.username;
+            document.getElementById('prof-stud-email').value = state.activeUser.email;
+            document.getElementById('prof-stud-grado').value = state.activeUser.grado;
+            document.getElementById('prof-stud-seccion').value = state.activeUser.seccion;
+            document.getElementById('prof-stud-cursos').value = state.activeUser.cursos.join(', ');
+            document.getElementById('prof-stud-status').value = state.activeUser.status;
+            document.getElementById('stud-level-badge').innerText = `Nivel ${state.activeUser.level || 1}`;
+            document.getElementById('val-mes-p').innerText = `${(state.activeUser.hoursThisMonth || 0).toFixed(1)} hrs`;
+            document.getElementById('val-total-p').innerText = `${(state.activeUser.totalHours || 0).toFixed(1)} hrs`;
+            document.getElementById('render-inspo-quote').innerText = `"${state.activeUser.quote}"`;
+            document.getElementById('render-inspo-img').src = state.activeUser.img;
+        }
+
+        // LÓGICA DE CONTROL CRÍTICO DE RACHAS EN GRIS POR DEFECTO
+        function updateRachasUI() {
+            const currentDayIdx = new Date().getDay(); // 0=Dom, 1=Lun...
+            const adjustedDayIdx = currentDayIdx === 0 ? 6 : currentDayIdx - 1; // Ajustar a Lu=0, Ma=1...
+
+            // Resetear visual
+            for(let i=0; i<7; i++) {
+                document.getElementById(`p-day-${i}`).innerHTML = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'][i] + '<div>⚫</div>';
+                document.getElementById(`p-day-${i}`).classList.remove('active-p');
+                document.getElementById(`s-day-${i}`).innerHTML = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'][i] + '<div>⚫</div>';
+                document.getElementById(`s-day-${i}`).classList.remove('active-s');
+            }
+
+            // Validar si yo completé un reto hoy
+            const hasMyEvidence = state.evidences.some(e => e.usuario_id === state.activeUser.email);
+            if (hasMyEvidence) {
+                document.getElementById(`p-day-${adjustedDayIdx}`).innerHTML = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'][adjustedDayIdx] + '<div>🔥</div>';
+                document.getElementById(`p-day-${adjustedDayIdx}`).classList.add('active-p');
+                document.getElementById('stud-streak-badge').innerText = "1";
+            } else {
+                document.getElementById('stud-streak-badge').innerText = "0";
+            }
+
+            // Validar si AL MENOS ALGUIEN de mi salón (mismo grado y sección) completó un reto hoy
+            const hasClassEvidence = state.evidences.some(e => e.grado === state.activeUser.grado && e.seccion === state.activeUser.seccion);
+            if (hasClassEvidence) {
+                document.getElementById(`s-day-${adjustedDayIdx}`).innerHTML = ['Lu','Ma','Mi','Ju','Vi','Sa','Do'][adjustedDayIdx] + '<div>✔</div>';
+                document.getElementById(`s-day-${adjustedDayIdx}`).classList.add('active-s');
+                document.getElementById('val-mes-s').innerText = "1.0 hrs";
+                document.getElementById('val-total-s').innerText = "1.0 hrs";
+            } else {
+                document.getElementById('val-mes-s').innerText = "0.0 hrs";
+                document.getElementById('val-total-s').innerText = "0.0 hrs";
+            }
+        }
+
+        function toggleStudentProfileMutation() {
+            const fields = ['prof-stud-user', 'prof-stud-seccion', 'prof-stud-grado'];
+            const btn = document.getElementById('btn-save-student-profile');
+            if(btn.innerText === "Editar Configuración") {
+                fields.forEach(f => document.getElementById(f).disabled = false); btn.innerText = "Guardar Cambios"; btn.style.background = "var(--success-color)";
+            } else {
+                fields.forEach(f => document.getElementById(f).disabled = true);
+                state.activeUser.username = document.getElementById('prof-stud-user').value;
+                state.activeUser.seccion = document.getElementById('prof-stud-seccion').value;
+                state.activeUser.grado = document.getElementById('prof-stud-grado').value;
+                state.activeUser.quote = document.getElementById('input-prof-quote').value;
+                if(document.getElementById('input-prof-img').value.trim() !== '') state.activeUser.img = document.getElementById('input-prof-img').value;
+                
+                const idx = state.users.findIndex(u => u.email === state.activeUser.email);
+                if(idx !== -1) state.users[idx] = state.activeUser;
+                localStorage.setItem('ed_users', JSON.stringify(state.users));
+                btn.innerText = "Editar Configuración"; btn.style.background = "var(--primary-color)"; syncStudentDOM(); updateRachasUI(); alert('Perfil guardado.');
+            }
+        }
+
+        function openRetakeTestPopup() {
+            document.getElementById('sub-perfil').classList.add('hidden');
+            document.getElementById('sub-retake-test-view').classList.remove('hidden');
+            buildSasQuestionsDOM('sas-questions-retake-container', 'retake');
+        }
+
+        function submitRetakeTest() {
+            state.activeUser.status = calculateSasScore('retake');
+            const idx = state.users.findIndex(u => u.email === state.activeUser.email);
+            if(idx !== -1) state.users[idx] = state.activeUser;
+            localStorage.setItem('ed_users', JSON.stringify(state.users));
+            document.getElementById('sub-retake-test-view').classList.add('hidden');
+            document.getElementById('sub-perfil').classList.remove('hidden');
+            syncStudentDOM(); alert('Diagnóstico actualizado.');
+        }
+
+        function renderStudentChallengesFeed() {
+            const container = document.getElementById('student-challenges-render-feed'); container.innerHTML = '';
+            state.activeUser.cursos.forEach(curso => {
+                const filtered = state.challenges.filter(c => c.curso === curso && (c.grado === state.activeUser.grado || c.grado === 'Todos los grados'));
+                const section = document.createElement('div');
+                section.innerHTML = `<div class="course-section-title">📚 Área Curricular: ${curso}</div>`;
+                filtered.forEach(ch => {
+                    const item = document.createElement('div'); item.className = 'reto-item'; item.onclick = () => openEvidencePopupForm(ch.title, false);
+                    item.innerHTML = `<span class="competencia-label">🎯 Competencia CNEB: ${ch.comp || 'Desarrollo Competencial'}</span><span>➥ ${ch.title}</span>`; 
+                    section.appendChild(item);
+                });
+                container.appendChild(section);
+            });
+        }
+
+        function openEvidencePopupForm(title, isOwn) { document.getElementById('lbl-active-challenge-title').innerText = title; document.getElementById('box-own-course-select').classList.toggle('hidden', !isOwn); navTo('reto-evidencia'); }
+        function openOwnChallengeForm() { openEvidencePopupForm('Propuesta de Actividad Autónoma', true); }
+        function cancelEvidenceSubmit() { navTo('reto-lista'); }
+
+        function submitEvidenceData() {
+            const notes = document.getElementById('evidence-notes').value.trim();
+            const hours = parseFloat(document.getElementById('evidence-hours').value) || 0;
+            if(!notes) { alert('Escribe tu bitácora.'); return; }
+            let targetCourse = "General";
+            if(!document.getElementById('box-own-course-select').classList.contains('hidden')) {
+                targetCourse = document.getElementById('own-course-target').value;
+            } else {
+                const titleStr = document.getElementById('lbl-active-challenge-title').innerText;
+                const matchCh = state.challenges.find(c => c.title.includes(titleStr) || titleStr.includes(c.title));
+                if(matchCh) targetCourse = matchCh.curso;
+            }
+
+            state.evidences.push({ id: 'ev_' + Date.now(), usuario_id: state.activeUser.email, username: state.activeUser.username, grado: state.activeUser.grado, seccion: state.activeUser.seccion, curso: targetCourse, hours: hours + ' hrs', rawHours: hours, notes: notes, reviewedBy: 'Pendiente', status: 'Pendiente' });
+            localStorage.setItem('ed_evidences', JSON.stringify(state.evidences)); document.getElementById('evidence-notes').value = ''; alert('Evidencia enviada.');
+            updateRachasUI(); navTo('racha');
+        }
+
+        function navigateWeekSim() { alert('Simulación: Historial de semanas anteriores.'); }
+        function triggerSecuredAction(action) {
+            if(action === 'reiniciar' && confirm('¿Borrar contadores?')) { alert('Contadores reiniciados.'); }
+            if(action === 'salir' && confirm('¿Cerrar sesión?')) logOutUser();
+            if(action === 'eliminar' && confirm('¿Eliminar cuenta permanentemente?')) { state.users = state.users.filter(u => u.email !== state.activeUser.email); localStorage.setItem('ed_users', JSON.stringify(state.users)); logOutUser(); }
+        }
+        function logOutUser() { state.activeUser = null; document.getElementById('student-app').classList.add('hidden'); document.getElementById('teacher-app').classList.add('hidden'); document.getElementById('auth-portal').classList.remove('hidden'); }
+
+        function navTo(view) {
+            document.getElementById('student-app').querySelectorAll('.sub-view').forEach(v => v.classList.add('hidden'));
+            document.getElementById('sub-' + view).classList.remove('hidden');
+            document.querySelectorAll('#student-nav .nav-item').forEach((el, idx) => { el.classList.toggle('active', ['inicio','perfil','reto-lista','racha','config'][idx] === view); });
+            if(view === 'reto-lista') renderStudentChallengesFeed();
+            if(view === 'racha') updateRachasUI();
+        }
+
+        // LÓGICA DOCENTE
+        function switchTeacherTab(tab) {
+            document.getElementById('t-panel-validar').classList.toggle('hidden', tab !== 'validar'); document.getElementById('t-panel-retos').classList.toggle('hidden', tab !== 'retos'); document.getElementById('t-panel-perfil').classList.toggle('hidden', tab !== 'perfil');
+            document.getElementById('t-tab-validar').classList.toggle('active', tab === 'validar'); document.getElementById('t-tab-retos').classList.toggle('active', tab === 'retos'); document.getElementById('t-tab-perfil').classList.toggle('active', tab === 'perfil');
+            if(tab === 'validar') renderTeacherValidationTable(); if(tab === 'retos') renderTeacherRepoChallenges(); if(tab === 'perfil') renderTeacherProfileCourses();
+        }
+
+        function renderTeacherValidationTable() {
+            const tbody = document.getElementById('render-teacher-validation-table'); tbody.innerHTML = '';
+            if(state.evidences.length === 0) { tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; font-style:italic; color:#718096;">Bandeja vacía. Llama a un alumno por lista para auditar sus bitácoras de desconexión.</td></tr>`; return; }
+            state.evidences.forEach(ev => {
+                const tr = document.createElement('tr'); tr.setAttribute('data-g', ev.grado); tr.setAttribute('data-s', ev.seccion); tr.setAttribute('data-c', ev.curso); tr.setAttribute('data-n', ev.username.toLowerCase());
+                tr.innerHTML = `<td><input type="checkbox" class="td-select-student" value="${ev.id}"></td><td><strong>${ev.username}</strong></td><td>${ev.grado}</td><td>${ev.seccion}</td><td><span style="font-weight:bold; color:purple;">${ev.curso}</span></td><td>${ev.hours}</td><td>${ev.notes}</td><td><div class="evidence-thumb" onclick="alert('Portafolio visual de evidencias.')">👁️ Ver</div></td><td id="rev-cell-${ev.id}">${ev.reviewedBy}</td><td><span id="badge-cell-${ev.id}" class="status-badge ${ev.status === 'Validado' ? 'approved' : ''}">${ev.status}</span></td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterTeacherTableData() {
+            const gF = document.getElementById('f-t-grado').value; const sF = document.getElementById('f-t-seccion').value; const cF = document.getElementById('f-t-curso').value; const sI = document.getElementById('f-t-search').value.toLowerCase();
+            document.querySelectorAll('#render-teacher-validation-table tr').forEach(row => {
+                if(!row.getAttribute('data-g')) return;
+                row.style.display = ((gF === 'todos' || row.getAttribute('data-g') === gF) && (sF === 'todos' || row.getAttribute('data-s') === sF) && (cF === 'todos' || row.getAttribute('data-c') === cF) && row.getAttribute('data-n').includes(sI)) ? '' : 'none';
+            });
+        }
+
+        function toggleTeacherRowSelectAll(master) { document.querySelectorAll('.td-select-student').forEach(cb => { if(cb.closest('tr').style.display !== 'none') cb.checked = master.checked; }); updateTeacherSelectionCount(); }
+        function updateTeacherSelectionCount() { document.getElementById('lbl-teacher-selected-count').innerText = document.querySelectorAll('.td-select-student:checked').length + ' seleccionados'; }
+
+        function approveSelectedEvidencesLote() {
+            const checked = document.querySelectorAll('.td-select-student:checked'); if(checked.length === 0) return;
+            checked.forEach(cb => {
+                const id = cb.value; const ev = state.evidences.find(e => e.id === id);
+                if(ev) { ev.status = 'Validado'; ev.reviewedBy = state.activeUser.username === 'Docente' ? 'Prof. Evaluador' : state.activeUser.username; document.getElementById('badge-cell-' + id).innerText = 'Validado'; document.getElementById('badge-cell-' + id).classList.add('approved'); document.getElementById('rev-cell-' + id).innerText = ev.reviewedBy; }
+                cb.checked = false;
+            });
+            localStorage.setItem('ed_evidences', JSON.stringify(state.evidences)); updateTeacherSelectionCount(); document.getElementById('chk-master-teacher').checked = false; alert('Aprobación en lote completada.');
+        }
+
+        function simulateWeekElapse() {
+            if(!confirm('¿Simular cierre semanal escolar?')) return;
+            state.users.forEach(u => {
+                if(u.role !== 'alumno') return;
+                const approvedEvidences = state.evidences.filter(e => e.usuario_id === u.email && e.status === 'Validado');
+                const weeklyHours = approvedEvidences.reduce((sum, current) => sum + (current.rawHours || 0), 0);
+                if(weeklyHours >= 10) { u.level = (u.level || 1) + 1; } else if(weeklyHours === 0) { if((u.level || 1) > 1) u.level -= 1; }
+                u.hoursThisMonth = (u.hoursThisMonth || 0) + weeklyHours; u.totalHours = (u.totalHours || 0) + weeklyHours;
+            });
+            state.evidences = []; localStorage.setItem('ed_users', JSON.stringify(state.users)); localStorage.setItem('ed_evidences', JSON.stringify(state.evidences));
+            renderTeacherValidationTable(); alert('Cierre de semana calculado. El control de rangos ha sido actualizado en el sistema.');
+        }
+
+        function renderTeacherRepoChallenges() {
+            const container = document.getElementById('render-teacher-repo-challenges'); container.innerHTML = '';
+            state.challenges.forEach(ch => {
+                const div = document.createElement('div'); div.className = 'repo-item';
+                div.innerHTML = `<div><strong>${ch.title}</strong><div class="repo-meta">Curso: ${ch.curso} | Competencia CNEB: ${ch.comp || 'Desarrollo Transversal'}</div></div><button class="btn-config-opt danger" style="width:auto; padding:6px 12px; font-size:12px;" onclick="deleteChallenge('${ch.id}')">Eliminar</button>`;
+                container.appendChild(div);
+            });
+        }
+
+        function createNewChallengeData() {
+            const title = document.getElementById('add-c-title').value.trim(); const comp = document.getElementById('add-c-comp').value.trim(); if(!title || !comp) return;
+            state.challenges.push({ id: 'c_' + Date.now(), curso: document.getElementById('add-c-curso').value, grado: document.getElementById('add-c-grado').value, comp, title });
+            localStorage.setItem('ed_challenges', JSON.stringify(state.challenges)); document.getElementById('add-c-title').value = ''; document.getElementById('add-c-comp').value = ''; renderTeacherRepoChallenges(); alert('Reto guardado.');
+        }
+        function deleteChallenge(id) { state.challenges = state.challenges.filter(c => c.id !== id); localStorage.setItem('ed_challenges', JSON.stringify(state.challenges)); renderTeacherRepoChallenges(); }
+        function renderTeacherProfileCourses() { const list = document.getElementById('render-teacher-assigned-list'); list.innerHTML = ''; state.activeUser.assignedCourses.forEach((c, i) => { list.innerHTML += `<div class="assigned-badge">${c.curso} - ${c.grado} <span onclick="removeTeacherCourse(${i})">×</span></div>`; }); }
+        function assignCourseToTeacherMemory() { state.activeUser.assignedCourses.push({ curso: document.getElementById('prof-add-curso').value, grado: document.getElementById('prof-add-grado').value }); renderTeacherProfileCourses(); }
+        function removeTeacherCourse(i) { state.activeUser.assignedCourses.splice(i, 1); renderTeacherProfileCourses(); }
+        function saveTeacherProfileState() { state.activeUser.username = document.getElementById('prof-t-name').value; const idx = state.users.findIndex(u => u.email === state.activeUser.email); if(idx !== -1) state.users[idx] = state.activeUser; localStorage.setItem('ed_users', JSON.stringify(state.users)); alert('Perfil guardado.'); }
+        document.addEventListener('change', function(e){ if(e.target && e.target.classList.contains('td-select-student')) updateTeacherSelectionCount(); });
+    </script>
+</body>
+</html>
